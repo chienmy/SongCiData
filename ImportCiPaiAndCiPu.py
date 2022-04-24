@@ -1,4 +1,7 @@
-import json
+"""
+词牌词谱数据导入脚本
+数据来源：诗词吾爱网 https://52shici.com/index.php
+"""
 import logging
 import re
 
@@ -6,59 +9,40 @@ import requests
 from bs4 import BeautifulSoup
 from bs4.element import NavigableString
 
+from Model import CiPai, CiPu
 
-def save_all_cipai():
-    result = {}
+
+def save_all_ci_pai() -> None:
     # 遍历词牌分类及url
     r = requests.get("https://52shici.com/zd/cipai.php")
     soup = BeautifulSoup(r.text, features="lxml")
-    # # 词牌分类
-    # category_dict = {}
-    # for div in soup.find_all(name="div", class_="box filter"):
-    #     category = div.find("h1").contents[0].strip()
-    #     for a in div.find(name="ul").find_all(name="a"):
-    #         pass
     for div in soup.find_all(id="all"):
         # 保存词牌名和对应url
         for a in div.find(name="ul").find_all(name="a"):
-            result[a.string] = {
-                "name": a.string,
-                "url": "https://52shici.com/zd/" + a["href"]
-            }
-    for name in result.keys():
-        logging.info(name)
-        try:
-            result[name].update(save_one_cipai(result[name]["url"]))
-            del result[name]["url"]
-        except Exception:
-            continue
-    logging.info("Size: " + str(len(result)))
-    return result
+            try:
+                logging.info(a.string)
+                save_one_ci_pai(a.string, "https://52shici.com/zd/" + a["href"])
+            except Exception:
+                logging.error(a.string)
+                continue
 
 
-def save_one_cipai(url: str) -> dict:
+def save_one_ci_pai(name: str, url: str) -> None:
     r = requests.get(url)
     soup = BeautifulSoup(r.text, features="lxml")
     # 词牌描述
     description = soup.find(id="cipaiBox").contents[2].strip().replace(" ", "")
-    # 各作者体例
-    authors = []
+    # 保存词牌
+    ci_pai_id = CiPai.insert(name=name, description=description).execute()
     for a in soup.find(id="ti").find_all(name="a"):
-        author_name = a.string.strip()
-        author_detail = {
-            "name": author_name,
-            "main": "class" in a.attrs
-        }
-        logging.info("\t" + author_name)
-        author_detail.update(save_ti("https://52shici.com/zd/pu.php" + a["href"]))
-        authors.append(author_detail)
-    return {
-        "description": description,
-        "authors": authors
-    }
+        logging.info("\t" + a.string.strip())
+        save_ti(ci_pai_id=ci_pai_id,
+                author=a.string.strip(),
+                main_flag=int("class" in a.attrs),
+                url="https://52shici.com/zd/pu.php" + a["href"])
 
 
-def save_ti(url: str) -> dict:
+def save_ti(ci_pai_id: int, author: str, main_flag: int, url: str) -> None:
     r = requests.get(url)
     soup = BeautifulSoup(r.text, features="lxml")
     # 说明
@@ -154,19 +138,27 @@ def save_ti(url: str) -> dict:
             mark_index.append(start)
         else:
             logging.warning(s)
-    return {
-        "description": description,
-        "pu": pu,
-        "examples": examples,
-        "introduction": introduction,
-        "dual_part": dual_part_index,
-        "overlap_part": overlap_part_index,
-        "mark": mark_index
-    }
+    CiPu.insert(
+        ci_pai_id=ci_pai_id,
+        author=author,
+        content="|".join(pu),
+        example="|".join(examples),
+        description=description,
+        introduction=introduction,
+        main_flag=main_flag,
+        dual_part=",".join(map(lambda l: ",".join(map(lambda m: str(m), l)), dual_part_index)),
+        overlap_part=",".join(map(lambda l: ",".join(map(lambda m: str(m), l)), overlap_part_index)),
+        mark_part=",".join(map(lambda m: str(m), mark_index))
+    ).execute()
 
 
 if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO,
                         format="%(asctime)s - %(levelname)-9s %(filename)-15s[:%(lineno)d]\t%(message)s")
-    with open("cipai.json", "w", encoding="utf-8") as f:
-        f.write(json.dumps(save_all_cipai(), indent=4, separators=(',', ':'), ensure_ascii=False))
+    # 清空并重建数据表
+    CiPu.drop_table(safe=False)
+    CiPai.drop_table(safe=False)
+    CiPu.create_table()
+    CiPai.create_table()
+    # 开始下载数据
+    save_all_ci_pai()
