@@ -22,6 +22,8 @@ class CiPu(BaseModel):
     ci_pai_id = IntegerField(index=True)
     # 作者
     author = TextField()
+    # 字数
+    size = IntegerField()
     # 词谱，分段以|分隔
     content = TextField()
     # 示例，分段以|分隔
@@ -45,14 +47,14 @@ class Ci(BaseModel):
     id = AutoField()
     # 词牌ID，如果本数据库中存在则为词牌id，否则为-1
     ci_pai_id = IntegerField(default=-1)
-    # 题目
-    title = TextField(default="")
+    # 词牌
+    ci_pai_name = TextField(default="")
+    # 词谱ID
+    ci_pu_id = IntegerField(default=-1)
     # 作者
     author = TextField()
     # 正文
     content = TextField()
-    # 权重，由搜索引擎结果计算得出
-    rank = IntegerField()
 
 
 class Yun(BaseModel):

@@ -141,6 +141,7 @@ def save_ti(ci_pai_id: int, author: str, main_flag: int, url: str) -> None:
     CiPu.insert(
         ci_pai_id=ci_pai_id,
         author=author,
+        size=len(re.sub(r"[，。、|]", "", pu_str)),
         content="|".join(pu),
         example="|".join(examples),
         description=description,
