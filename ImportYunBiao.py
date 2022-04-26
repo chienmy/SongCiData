@@ -20,10 +20,9 @@ if __name__ == '__main__':
         logging.info(title)
         i = title.find("_")
         # 导入数据
-        for c in chars:
-            Yun.insert(
-                book=title[:i],
-                part=title[i:].replace("_", ""),
-                ping_ze=(1 if title[i + 1] in list("sqrz") else 0),
-                value=c
-            ).execute()
+        Yun.insert_many([{
+            "book": title[:i],
+            "part": title[i:].replace("_", ""),
+            "ping_ze": (1 if title[i + 1] in list("sqrz") else 0),
+            "value": c
+        } for c in chars]).execute()
