@@ -30,11 +30,9 @@ def handle_data(data: dict) -> dict:
             ci_pu_para = list(filter(lambda s: len(s) > 0, re.split(r"[，。、|]", ci_pu.content)))
             text_para = list(filter(lambda s: len(s) > 0, re.split(r"[，。、]", text)))
             if len(ci_pu_para) != len(text_para):
-                break
+                continue
             for i in range(len(ci_pu_para)):
                 if len(ci_pu_para[i]) != len(text_para[i]):
-                    if ci_pai.id == 376:
-                        print(ci_pu_para[i], text_para[i])
                     break
             else:
                 ci_pu_id = ci_pu.id

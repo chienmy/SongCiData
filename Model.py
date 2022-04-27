@@ -68,3 +68,23 @@ class Yun(BaseModel):
     ping_ze = IntegerField(default=0)
     # 字
     value = TextField()
+
+
+class CiZu(BaseModel):
+    """ 词组 """
+    id = AutoField()
+    # 词组长度
+    size = IntegerField()
+    # 最多支持四字词组
+    c1 = TextField(default="")
+    c2 = TextField(default="")
+    c3 = TextField(default="")
+    c4 = TextField(default="")
+    # 出现次数计数
+    count = IntegerField(default=1)
+    # 例句ID
+    example_id = IntegerField(default=-1)
+    # 例句
+    example = TextField()
+    # 例句权重
+    example_rank = IntegerField()
