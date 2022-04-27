@@ -8,7 +8,8 @@ import json
 import os
 import re
 
-from Model import Ci, CiPai, CiPu
+from peewee import fn
+from Model import Ci, CiPai, CiPu, Yun
 
 
 def handle_data(data: dict) -> dict:
@@ -22,28 +23,60 @@ def handle_data(data: dict) -> dict:
             break
     else:
         ci_pai = None
+    # 候选词谱列表
+    ci_pu_id_list = []
     # 匹配词谱
-    # TODO 匹配词谱时进行平仄的校验
-    ci_pu_id = -1
     if ci_pai:
         for ci_pu in CiPu.select().where(CiPu.ci_pai_id == ci_pai.id):
             ci_pu_para = list(filter(lambda s: len(s) > 0, re.split(r"[，。、|]", ci_pu.content)))
             text_para = list(filter(lambda s: len(s) > 0, re.split(r"[，。、]", text)))
             if len(ci_pu_para) != len(text_para):
                 continue
+            # 计算平仄相似度
+            match_num = 0
             for i in range(len(ci_pu_para)):
                 if len(ci_pu_para[i]) != len(text_para[i]):
                     break
+                for yun_c, c in zip(ci_pu_para[i], text_para[i]):
+                    if match_ping_ze(c, yun_c):
+                        match_num += 1
             else:
-                ci_pu_id = ci_pu.id
-                break
+                ci_pu_id_list.append((ci_pu.id, match_num))
+    # 取匹配度最高者
+    ci_pu_id_list.sort(key=lambda x: x[1], reverse=True)
     return {
         "ci_pai_id": ci_pai.id if ci_pai else -1,
         "ci_pai_name": ci_pai.name if ci_pai else data["rhythmic"],
-        "ci_pu_id": ci_pu_id,
+        "ci_pu_id": ci_pu_id_list[0][0] if len(ci_pu_id_list) > 0 else -1,
         "author": data["author"],
         "content": text
     }
+
+
+def match_ping_ze(c: str, yun_c: str, yun_book="clzy") -> bool:
+    # 查找字符的平仄
+    yun_sum = Yun.select(fn.SUM(Yun.value)).where((Yun.book == yun_book) & (Yun.value == c))
+    yun_list = Yun.select().where((Yun.book == yun_book) & (Yun.value == c))
+    if yun_sum == 0:
+        c_flag = 0
+    elif yun_sum == len(yun_list):
+        c_flag = 1
+    else:
+        c_flag = -1
+    # 词谱此处的平仄
+    if ord("0") <= ord(yun_c) <= ord("1"):
+        yun_c_flag = int(yun_c)
+    elif ord("2") <= ord(yun_c) <= ord("3"):
+        yun_c_flag = -1
+    elif yun_c.islower():
+        yun_c_flag = 0
+    else:
+        yun_c_flag = 1
+    # 返回判断结果
+    if (c_flag < 0) or (yun_c_flag < 0):
+        return True
+    else:
+        return c_flag == yun_c_flag
 
 
 if __name__ == '__main__':

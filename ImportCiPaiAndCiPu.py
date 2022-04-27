@@ -157,8 +157,8 @@ if __name__ == "__main__":
     logging.basicConfig(level=logging.INFO,
                         format="%(asctime)s - %(levelname)-9s %(filename)-15s[:%(lineno)d]\t%(message)s")
     # 清空并重建数据表
-    CiPu.drop_table(safe=False)
-    CiPai.drop_table(safe=False)
+    CiPu.drop_table(safe=False) if CiPu.table_exists() else None
+    CiPai.drop_table(safe=False) if CiPai.table_exists() else None
     CiPu.create_table()
     CiPai.create_table()
     # 开始下载数据
