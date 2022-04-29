@@ -76,15 +76,15 @@ class CiZu(BaseModel):
     # 词组长度
     size = IntegerField()
     # 最多支持四字词组
-    c1 = TextField(default="")
-    c2 = TextField(default="")
-    c3 = TextField(default="")
-    c4 = TextField(default="")
+    c1 = TextField(default="", index=True)
+    c2 = TextField(default="", index=True)
+    c3 = TextField(default="", index=True)
+    c4 = TextField(default="", index=True)
     # 出现次数计数
     count = IntegerField(default=1)
     # 例句ID
     example_id = IntegerField(default=-1)
     # 例句
-    example = TextField()
+    example = TextField(default="")
     # 例句权重
-    example_rank = IntegerField()
+    example_rank = IntegerField(default=0)

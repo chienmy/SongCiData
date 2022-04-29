@@ -4,29 +4,87 @@ import re
 from collections import defaultdict
 
 import jieba
+import jiagu
 
-from Model import Ci, CiPu
+from Model import Ci, CiZu
+
+
+def cut_sentence(text):
+    cut_result = jieba.lcut(text)
+    if len(text) == 2:
+        return [text]
+    elif len(text) == 3:
+        # 恰好分为12或者21，直接作为结果
+        if len(text) == 2:
+            return cut_result
+        # 否则列出前两字和后两字
+        else:
+            return [text[0:2], text[1:3]]
+    elif len(text) == 4:
+        if text[0] in cut_result and text[3] in cut_result:
+            return [text[0], text[1:3], text[3]]
+        else:
+            return [text[0:2], text[2:4]]
+    elif len(text) == 5:
+        if text[2] in cut_result:
+            return [text[0:2], text[2], text[3:5]]
+        else:
+            if text[0:2] in cut_result:
+                return [text[0:2], text[2:4], text[4]]
+            elif text[3:5] in cut_result:
+                return [text[0], text[1:3], text[3:5]]
+            else:
+                return cut_result
+    elif len(text) == 6:
+        return [text[0:2], text[2:4], text[4:6]]
+    elif len(text) == 7:
+        # 前4字固定按22划分，对后三字重新划分，观察是否一致
+        index = 0
+        length = 0
+        for i, s in enumerate(cut_result):
+            if length < 4:
+                length += len(s)
+            else:
+                index = i
+                break
+        if length == 4:
+            part_cut_result = jieba.lcut(text[4:])
+            if len(part_cut_result) == 2:
+                return [text[0:2], text[2:4]] + part_cut_result
+            else:
+                return [text[0:2], text[2:4]] + cut_sentence(text[4:])
+        return [text[0:2], text[2:4]] + cut_sentence(text[4:])
+    elif len(text) == 8:
+        if text[0] in cut_result:
+            return [text[0]] + cut_sentence(text[1:])
+        elif text[0:2] in cut_result:
+            return [text[0:2]] + cut_sentence(text[2:])
+        else:
+            return cut_result
+    else:
+        logging.warning(text)
+        return []
 
 
 if __name__ == '__main__':
     logging.basicConfig(level=logging.INFO,
                         format="%(asctime)s - %(levelname)-9s %(filename)-15s[:%(lineno)d]\t%(message)s")
-    ci_pu = CiPu.get_or_none(CiPu.id == 1941)
-    all_divide = [list() for _ in range(len(re.split(r"[，。、]", ci_pu.example)))]
-    for ci in Ci.select().where(Ci.ci_pu_id == ci_pu.id):
-        d_list = []
-        for index, p in enumerate(re.split(r"[，。、]", ci.content)):
-            d = ""
-            for s in jieba.lcut(p):
-                for i in range(len(s) - 1):
-                    d += "0"
-                d += "1"
-            all_divide[index].append(d)
-    for i in range(len(all_divide)):
-        d = defaultdict(int)
-        for s in all_divide[i]:
-            d[s] += 1
-        d_list = list(d.items())
-        d_list.sort(key=lambda item: item[1], reverse=True)
-        print(d_list[0])
-        # print(list(filter(lambda s: s not in list("，。、"), jieba.lcut(ci.content))))
+    CiZu.drop_table(safe=False) if CiZu.table_exists() else None
+    CiZu.create_table()
+    ci_zu_data = {}
+    for ci in Ci.select():
+        for p in re.split(r"[，。、]", ci.content):
+            if len(p) > 1:
+                for word in cut_sentence(p):
+                    if len(word) <= 1:
+                        continue
+                    if word in ci_zu_data.keys():
+                        ci_zu_data[word].count += 1
+                    else:
+                        ci_zu = CiZu(size=len(word),
+                                     c1=word[0],
+                                     c2=word[1],
+                                     c3=word[2] if len(word) > 2 else "",
+                                     c4=word[3] if len(word) > 3 else "")
+                        ci_zu_data[word] = ci_zu
+    CiZu.bulk_create([ci_zu for ci_zu in ci_zu_data.values() if ci_zu.count > 1], batch_size=1000)
