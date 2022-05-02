@@ -1,10 +1,7 @@
-import json
 import logging
 import re
-from collections import defaultdict
 
 import jieba
-import jiagu
 
 from Model import Ci, CiZu
 
