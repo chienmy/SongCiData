@@ -35,21 +35,6 @@ def cut_sentence(text):
     elif len(text) == 6:
         return [text[0:2], text[2:4], text[4:6]]
     elif len(text) == 7:
-        # 前4字固定按22划分，对后三字重新划分，观察是否一致
-        index = 0
-        length = 0
-        for i, s in enumerate(cut_result):
-            if length < 4:
-                length += len(s)
-            else:
-                index = i
-                break
-        if length == 4:
-            part_cut_result = jieba.lcut(text[4:])
-            if len(part_cut_result) == 2:
-                return [text[0:2], text[2:4]] + part_cut_result
-            else:
-                return [text[0:2], text[2:4]] + cut_sentence(text[4:])
         return [text[0:2], text[2:4]] + cut_sentence(text[4:])
     elif len(text) == 8:
         if text[0] in cut_result:
@@ -71,6 +56,9 @@ if __name__ == '__main__':
     ci_zu_data = {}
     for ci in Ci.select():
         for p in re.split(r"[，。、]", ci.content):
+            # 忽略包含缺字的词
+            if "□" in p:
+                continue
             if len(p) > 1:
                 for word in cut_sentence(p):
                     if len(word) <= 1:
