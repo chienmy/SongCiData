@@ -82,9 +82,11 @@ class CiZu(BaseModel):
     c4 = TextField(default="", index=True)
     # 出现次数计数
     count = IntegerField(default=1)
-    # 例句ID
-    example_id = IntegerField(default=-1)
-    # 例句
-    example = TextField(default="")
-    # 例句权重
-    example_rank = IntegerField(default=0)
+    # 下一字预测
+    next_zi = TextField(default="")
+
+
+class Zi(BaseModel):
+    id = AutoField()
+    value = TextField(index=True)
+    index_list = TextField()
